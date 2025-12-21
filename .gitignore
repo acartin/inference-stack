@@ -1,0 +1,19 @@
+# Entorno
+.env
+__pycache__/
+*.pyc
+.venv/
+
+# Ignorar los Symlinks en los servicios (para evitar rutas rotas en otros entornos)
+services/**/architecture_ref.md
+services/**/conventions_ref.md
+services/**/service_logic.md
+services/**/.cursorrules
+services/**/shared_schemas
+services/**/client_mappings
+services/**/embedding_policy.yaml
+
+# Pero PERMITIR el código real de los servicios
+!services/etl-adapter/
+!services/semantic-adapter/
+!services/inference-core/

@@ -1,0 +1,33 @@
+# INSTRUCCIÓN DE CONTEXTO LOCAL
+- Estás trabajando en un entorno de servicio aislado.
+- Es OBLIGATORIO leer `service_logic.md` para entender tus tareas en este módulo.
+- Consulta `architecture_ref.md` para no romper la integración con los demás servicios.
+- Usa los JSON dentro de `shared_schemas/` como la única fuente de verdad para estructuras de datos.
+
+# REGLAS DE ORO DEL PROYECTO (Inference Stack)
+
+1. FUENTE DE VERDAD ABSOLUTA: 
+   - Antes de escribir código, consulta siempre .context/architecture.md y el archivo específico en .context/services/ correspondiente al módulo. 
+   - No inventes flujos ni arquitecturas nuevas sin que estén documentadas en .context/.
+
+2. SEPARACIÓN DE RESPONSABILIDADES (SCOPE):
+   - ETL Adapter: Única entrada de datos, mapeo multitenant, validación y hashing (SHA-256).
+   - Semantic Adapter: Generación de embeddings (Gemini/OpenAI), chunking y gestión de pgvector (HNSW).
+   - Inference Core: Orquestación RAG, resolución de intenciones y respuesta al usuario.
+
+3. CONTRATOS Y ESQUEMAS:
+   - Toda normalización de datos DEBE seguir config/schemas/canonical_document.json.
+   - Si cambias un esquema, debes actualizar inmediatamente los mappers en etl-adapter.
+
+4. ESTÁNDARES TÉCNICOS:
+   - Stack: Python 3.11+, FastAPI, LangChain.
+   - Calidad: Uso obligatorio de Type Hints y Pydantic para validación de datos.
+   - Persistencia: Postgres (VM 101) para relacional y pgvector para vectorial.
+
+5. TONO Y COMUNICACIÓN:
+   - Respuestas técnicas, directas y breves.
+   - PROHIBIDO el uso de adulaciones o frases de relleno (ej: "excelente pregunta", "eres muy perspicaz").
+
+6. FLUJO DE TRABAJO:
+   - Sigue el flujo determinístico definido en .context/services/etl_adapter.md para procesos de ingesta.
+   - Asegura la idempotencia mediante el uso de hashes antes de cualquier operación de Upsert.

@@ -1,0 +1,6 @@
+stack:
+  backend: FastAPI
+  orchestration: LangChain
+  database: PostgreSQL + pgvector
+  llm: Gemini (primary), OpenAI (fallback)
+  containerization: Docker Compose

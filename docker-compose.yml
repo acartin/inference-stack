@@ -1,0 +1,63 @@
+services:
+  # 1. FastAPI Principal
+  inference-core:
+    container_name: prd-api-inference-core-01
+    build:
+      context: ./services/inference-core
+      dockerfile: Dockerfile
+    restart: always
+    tty: true
+    stdin_open: true
+    ports:
+      - "${API_PORT}:8000"
+    environment:
+      - PYTHONPATH=/app
+    networks:
+      - ai-network
+    volumes:
+      - ./services/inference-core:/app
+      - ./config:/app/shared_config:ro # Lectura de esquemas compartidos
+
+  # 2. ETL Adapter
+  etl-adapter:
+    container_name: prd-api-etl-adapter-fastapi-01
+    build:
+      context: ./services/etl-adapter
+      dockerfile: Dockerfile
+    restart: always
+    tty: true
+    stdin_open: true
+    ports:
+      - "${ETL_PORT}:8000"
+    environment:
+      - PYTHONPATH=/app
+    networks:
+      - ai-network
+    volumes:
+      - ./services/etl-adapter:/app
+      - ./config:/app/shared_config:ro
+
+  # 3. Semantic Adapter
+  semantic-adapter:
+    container_name: prd-api-semantic-adapter-fastapi-01
+    build:
+      context: ./services/semantic-adapter
+      dockerfile: Dockerfile
+    restart: always
+    tty: true
+    stdin_open: true
+    ports:
+      - "${SEMANTIC_PORT}:8000"
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - PYTHONPATH=/app
+    networks:
+      - ai-network
+    volumes:
+      - ./services/semantic-adapter:/app
+      - ./config:/app/shared_config:ro
+
+networks:
+  ai-network:
+    driver: bridge
