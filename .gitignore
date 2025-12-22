@@ -16,4 +16,4 @@ services/**/embedding_policy.yaml
 # Pero PERMITIR el código real de los servicios
 !services/etl-adapter/
 !services/semantic-adapter/
-!services/inference-core/
+!services/inference-core/venv/
