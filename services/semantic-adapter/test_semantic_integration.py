@@ -37,32 +37,12 @@ async def main():
         print(f"✅ Embedding generado exitosamente.")
         print(f"   Dimensión del vector: {len(vector)}")
         
-        # Validar dimensión esperada (768 para algunos modelos, 1536 para otros - el repo espera 1536)
-        if len(vector) != 1536:
-            print(f"⚠️ Advertencia: La dimensión del vector ({len(vector)}) puede no coincidir con la columna 'embedding vector(1536)' si no se usa el modelo correcto.")
-    except Exception as e:
-        print(f"❌ Error al generar embedding: {e}")
-        return
-
-    # 3. Validación de Persistencia
-    print("\n--- Persistiendo en Vector Store (Postgres) ---")
-    try:
+        # 3. Validación de Persistencia
+        print("\n--- Persistiendo en Vector Store (Postgres) ---")
         repo = VectorRepository()
         
-        # [FIX] : Para pruebas iniciales, forzamos recreación de tabla si el esquema cambió (1536 -> 768)
-        # En producción esto sería una migración.
-        with repo._get_connection() as conn:
-            with conn.cursor() as cur:
-                print("♻️  [TEST MODE] Verificando esquema... Dropping table para asegurar consistencia (768 dims)...")
-                cur.execute(f"DROP TABLE IF EXISTS {repo.table_name} CASCADE;")
-                conn.commit()
-        # Re-inicializar para recrear tabla con nuevo esquema
-        repo._init_db()
-
-        # Datos Dummy
         content_id = "test-integration-001"
         dummy_hash = hashlib.sha256(content_id.encode()).hexdigest()
-        
         doc_data = {
             "content_id": content_id,
             "client_id": "test_client",
@@ -75,9 +55,30 @@ async def main():
 
         repo.upsert_document(doc_data, vector)
         print("✅ Upsert (Insert/Update) realizado exitosamente en Postgres.")
+
+        # 4. Validación de Búsqueda Semántica
+        print("\n--- Ejecutando Búsqueda Semántica ---")
+        search_query = "stack de inferencia"
+        query_vector = await embedder.embed_query(search_query)
         
+        results = repo.search_similar(client_id="test_client", query_vector=query_vector, top_k=3)
+        
+        if results:
+            print(f"✅ Búsqueda exitosa. Se encontraron {len(results)} resultados.")
+            for r in results:
+                print(f"   - [{r['content_id']}] Similarity: {r['similarity']:.4f} | Content: {r['body_content'][:50]}...")
+            
+            # Verificar si nuestro documento insertado está presente
+            found = any(r['content_id'] == content_id for r in results)
+            if found:
+                print("✨ ÉXITO: El documento insertado fue recuperado semánticamente.")
+            else:
+                print("⚠️  AVISO: El documento insertado no apareció en los resultados principales.")
+        else:
+            print("❌ Error: No se devolvieron resultados en la búsqueda.")
+
     except Exception as e:
-        print(f"❌ Error al persistir en base de datos: {e}")
+        print(f"❌ Error durante la integración: {e}")
 
 if __name__ == "__main__":
     try:

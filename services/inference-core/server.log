@@ -1,0 +1,20 @@
+/home/acartin/inference-stack/services/semantic-adapter/venv/lib/python3.12/site-packages/langchain_google_genai/chat_models.py:47: FutureWarning: 
+
+All support for the `google.generativeai` package has ended. It will no longer be receiving 
+updates or bug fixes. Please switch to the `google.genai` package as soon as possible.
+See README for more details:
+
+https://github.com/google-gemini/deprecated-generative-ai-python/blob/main/README.md
+
+  from google.generativeai.caching import CachedContent  # type: ignore[import]
+INFO:     Started server process [89518]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8003 (Press CTRL+C to quit)
+INFO:     127.0.0.1:45658 - "GET /api/v1/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52828 - "GET /api/v1/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43622 - "GET /api/v1/health HTTP/1.1" 200 OK
+2026-01-04 22:39:38,562 - httpx - INFO - HTTP Request: POST http://192.168.0.32:8002/api/v1/search "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:60200 - "POST /api/v1/chat HTTP/1.1" 200 OK
+2026-01-04 22:39:41,273 - inference-core.orchestrator - INFO - Lead 55f1a520-301b-4c1b-9f23-dd4c863f570a scored: El usuario realiza una prueba, no muestra intención de compra ni proporciona detalles relevantes para calificar los criterios. Se asignan valores neutros por falta de información.
+INFO:     127.0.0.1:60208 - "GET /api/v1/chat/dce250d8-4acb-4a0a-b86c-23592c5265a1 HTTP/1.1" 404 Not Found

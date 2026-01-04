@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import hashlib
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field
@@ -38,6 +38,23 @@ class CanonicalDocument(BaseModel):
     body_content: str
     metadata: CanonicalMetadata
     hash: str
+
+class SearchRequest(BaseModel):
+    query_text: str
+    client_id: str
+    top_k: int = 5
+
+class SearchResult(BaseModel):
+    content_id: str
+    title: Optional[str]
+    body_content: str
+    metadata: Dict[str, Any]
+    score: float
+
+class SearchResponse(BaseModel):
+    results: List[SearchResult]
+    query_text: str
+    client_id: str
 
 @router.get("/health")
 async def health_check():
@@ -112,3 +129,76 @@ async def ingest_document(doc: CanonicalDocument):
         "chunks_processed": len(chunks),
         "db_records_upserted": upserted_count
     }
+
+@router.post("/search", response_model=SearchResponse)
+async def search_documents(req: SearchRequest):
+    """
+    Realiza una búsqueda semántica basada en el texto de consulta.
+    """
+    if not embedder:
+        raise HTTPException(status_code=503, detail="Embedder service not configured")
+
+    # 1. Generar embedding para la query
+    try:
+        query_vector = await embedder.embed_query(req.query_text)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Embedding generation failed: {str(e)}")
+
+    # 2. Búsqueda en DB (en threadpool ya que search_similar es síncrona)
+    try:
+        db_results = await run_in_threadpool(repo.search_similar, req.client_id, query_vector, req.top_k)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database search failed: {str(e)}")
+
+    # 3. Formatear resultados
+    formatted_results = []
+    for row in db_results:
+        formatted_results.append(SearchResult(
+            content_id=row["content_id"],
+            title=row["title"],
+            body_content=row["body_content"],
+            metadata=row["metadata"],
+            score=row["similarity"]
+        ))
+
+    return SearchResponse(
+        results=formatted_results,
+        query_text=req.query_text,
+        client_id=req.client_id
+    )
+
+@router.delete("/client/{client_id}")
+async def delete_client_data(client_id: str):
+    """
+    Endpoint para eliminar toda la memoria semántica de un cliente.
+    """
+    try:
+        count = await run_in_threadpool(repo.delete_client_data, client_id)
+        return {
+            "status": "success",
+            "client_id": client_id,
+            "records_deleted": count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete client data: {str(e)}")
+
+@router.delete("/client/{client_id}/document/{content_id}")
+async def delete_document(client_id: str, content_id: str):
+    """
+    Endpoint para eliminar un documento específico por su ID de contenido.
+    """
+    try:
+        count = await run_in_threadpool(repo.delete_document, client_id, content_id)
+        if count == 0:
+            # Opcional: Podríamos retornar 404, pero idempotencia (borrar algo que no existe = éxito) es válida.
+            # Sin embargo, para debug es útil saber si borró algo.
+            pass
+            
+        return {
+            "status": "success",
+            "client_id": client_id,
+            "content_id": content_id,
+            "records_deleted": count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete document: {str(e)}")

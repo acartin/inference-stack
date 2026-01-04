@@ -1,14 +1,15 @@
 # INSTRUCCIÓN DE CONTEXTO LOCAL
 - Estás trabajando en un entorno de servicio aislado.
-- Es OBLIGATORIO leer `service_logic.md` para entender tus tareas en este módulo.
-- Consulta `architecture_ref.md` para no romper la integración con los demás servicios.
-- Usa los JSON dentro de `shared_schemas/` como la única fuente de verdad para estructuras de datos.
+- Es OBLIGATORIO leer el `service_logic.md` **dentro del directorio del servicio actual** para entender tus tareas.
+- Consulta el `architecture_ref.md` local para no romper la integración con los demás servicios.
+- Usa los JSON dentro de `shared_schemas/` local como la única fuente de verdad para estructuras de datos.
 
 # REGLAS DE ORO DEL PROYECTO (Inference Stack)
 
 1. FUENTE DE VERDAD ABSOLUTA: 
    - Antes de escribir código, consulta siempre .context/architecture.md y el archivo específico en .context/services/ correspondiente al módulo. 
    - No inventes flujos ni arquitecturas nuevas sin que estén documentadas en .context/.
+   - No hagas modificaciones en el codigo sin antes informar y proponer los cambios y esperar la aprobacion explicita.
 
 2. SEPARACIÓN DE RESPONSABILIDADES (SCOPE):
    - ETL Adapter: Única entrada de datos, mapeo multitenant, validación y hashing (SHA-256).

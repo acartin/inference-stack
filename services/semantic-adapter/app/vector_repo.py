@@ -1,4 +1,5 @@
 import os
+from typing import List
 import psycopg2
 from psycopg2.extras import RealDictCursor, Json
 from pgvector.psycopg2 import register_vector
@@ -26,7 +27,7 @@ class VectorRepository:
 
             -- Identidad lógica
             content_id TEXT NOT NULL,
-            client_id TEXT NOT NULL,
+            client_id UUID NOT NULL,
             source TEXT NOT NULL,
 
             -- Contenido
@@ -102,3 +103,49 @@ class VectorRepository:
                     ),
                 )
                 conn.commit()
+
+    def search_similar(self, client_id: str, query_vector: List[float], top_k: int = 5):
+        """
+        Busca los documentos más similares para un cliente específico.
+        Utiliza distancia de coseno (operator <=>).
+        """
+        query = f"""
+        SELECT 
+            content_id, 
+            title, 
+            body_content, 
+            metadata, 
+            1 - (embedding <=> %s::vector) AS similarity
+        FROM {self.table_name}
+        WHERE client_id = %s
+        ORDER BY similarity DESC
+        LIMIT %s;
+        """
+        with self._get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(query, (query_vector, client_id, top_k))
+                return cur.fetchall()
+
+    def delete_client_data(self, client_id: str) -> int:
+        """
+        Elimina todos los registros de conocimiento para un cliente específico.
+        """
+        query = f"DELETE FROM {self.table_name} WHERE client_id = %s"
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (client_id,))
+                deleted_count = cur.rowcount
+                conn.commit()
+                return deleted_count
+
+    def delete_document(self, client_id: str, content_id: str) -> int:
+        """
+        Elimina un documento específico (y sus chunks) basado en content_id y client_id.
+        """
+        query = f"DELETE FROM {self.table_name} WHERE client_id = %s AND content_id = %s"
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (client_id, content_id))
+                deleted_count = cur.rowcount
+                conn.commit()
+                return deleted_count
