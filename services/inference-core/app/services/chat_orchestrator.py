@@ -41,11 +41,11 @@ class ChatOrchestrator:
         # 4. Build Prompt
         context_text = "\n\n".join([f"Source {i+1}: {doc['body_content']}" for i, doc in enumerate(context_docs)])
         
-        # Format the system prompt with context
-        system_message_content = system_prompt_template.replace("{context_text}", context_text)
-
+        # Create a System Prompt Template from the DB string
+        # This handles {context_text} as a variable automatically
+        
         prompt = ChatPromptTemplate.from_messages([
-            ("system", system_message_content),
+            ("system", system_prompt_template),
             MessagesPlaceholder(variable_name="history"),
             ("human", "{input}")
         ])
@@ -54,21 +54,22 @@ class ChatOrchestrator:
         lc_history = []
         for msg in history[-10:]: # Last 10 messages for context
             if msg['role'] == 'user':
-                lc_history.append(HumanMessage(content=msg['content']))
+                lc_history.append(HumanMessage(content=msg.get('content') or msg.get('text', '')))
             else:
-                lc_history.append(AIMessage(content=msg['content']))
+                lc_history.append(AIMessage(content=msg.get('content') or msg.get('text', '')))
 
         # 4. Generate Answer
         chain = prompt | self.llm
         response = await chain.ainvoke({
+            "context_text": context_text,
             "history": lc_history,
             "input": request.query_text
         })
         answer = response.content
 
         new_history = history + [
-            {"role": "user", "text": request.query_text, "timestamp": str(datetime.now())},
-            {"role": "assistant", "text": answer, "timestamp": str(datetime.now())}
+            {"role": "user", "content": request.query_text, "timestamp": str(datetime.now())},
+            {"role": "assistant", "content": answer, "timestamp": str(datetime.now())}
         ]
         self.repo.update_conversation(UUID(conv_id), new_history)
 
@@ -76,7 +77,9 @@ class ChatOrchestrator:
         # We find the lead_id from the conversation
         lead_id = conversation.get('lead_id')
         if lead_id:
-            asyncio.create_task(self._run_lead_analysis(lead_id, new_history))
+            # Fetch Catalogs
+            catalogs = self.repo.get_catalogs()
+            asyncio.create_task(self._run_lead_analysis(lead_id, new_history, catalogs))
 
         # 7. Format Response
         sources = [
@@ -114,12 +117,12 @@ class ChatOrchestrator:
                 logger.error(f"Error calling semantic adapter: {e}")
                 return []
 
-    async def _run_lead_analysis(self, lead_id: str, history: List[Dict[str, Any]]):
+    async def _run_lead_analysis(self, lead_id: str, history: List[Dict[str, Any]], catalogs: Dict[str, Any]):
         """
         Helper para ejecutar el análisis de lead en background.
         """
         try:
-            scoring_result = await self.analyzer.analyze_conversation(history)
+            scoring_result = await self.analyzer.analyze_conversation(history, catalogs)
             self.repo.update_lead_scores(lead_id, scoring_result.dict())
             logger.info(f"Lead {lead_id} scored: {scoring_result.reasoning}")
         except Exception as e:

@@ -1,0 +1,91 @@
+/home/acartin/inference-stack/services/semantic-adapter/venv/lib/python3.12/site-packages/langchain_google_genai/chat_models.py:47: FutureWarning: 
+
+All support for the `google.generativeai` package has ended. It will no longer be receiving 
+updates or bug fixes. Please switch to the `google.genai` package as soon as possible.
+See README for more details:
+
+https://github.com/google-gemini/deprecated-generative-ai-python/blob/main/README.md
+
+  from google.generativeai.caching import CachedContent  # type: ignore[import]
+INFO:     Started server process [435891]
+INFO:     Waiting for application startup.
+INFO:semantic_adapter:🚀 Iniciando Semantic Adapter...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8005 (Press CTRL+C to quit)
+INFO:     127.0.0.1:35574 - "GET /api/v1/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35574 - "POST /api/v1/ingest HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/home/acartin/inference-stack/services/semantic-adapter/venv/lib/python3.12/site-packages/uvicorn/protocols/http/h11_impl.py", line 410, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/acartin/inference-stack/services/semantic-adapter/venv/lib/python3.12/site-packages/uvicorn/middleware/proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/acartin/inference-stack/services/semantic-adapter/venv/lib/python3.12/site-packages/fastapi/applications.py", line 1135, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/acartin/inference-stack/services/semantic-adapter/venv/lib/python3.12/site-packages/starlette/applications.py", line 107, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/acartin/inference-stack/services/semantic-adapter/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/acartin/inference-stack/services/semantic-adapter/venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/acartin/inference-stack/services/semantic-adapter/venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/acartin/inference-stack/services/semantic-adapter/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/acartin/inference-stack/services/semantic-adapter/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/acartin/inference-stack/services/semantic-adapter/venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/home/acartin/inference-stack/services/semantic-adapter/venv/lib/python3.12/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/acartin/inference-stack/services/semantic-adapter/venv/lib/python3.12/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/home/acartin/inference-stack/services/semantic-adapter/venv/lib/python3.12/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/home/acartin/inference-stack/services/semantic-adapter/venv/lib/python3.12/site-packages/fastapi/routing.py", line 115, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/acartin/inference-stack/services/semantic-adapter/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/acartin/inference-stack/services/semantic-adapter/venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/acartin/inference-stack/services/semantic-adapter/venv/lib/python3.12/site-packages/fastapi/routing.py", line 101, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/home/acartin/inference-stack/services/semantic-adapter/venv/lib/python3.12/site-packages/fastapi/routing.py", line 355, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/acartin/inference-stack/services/semantic-adapter/venv/lib/python3.12/site-packages/fastapi/routing.py", line 243, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/acartin/inference-stack/services/semantic-adapter/app/api.py", line 123, in ingest_document
+    await run_in_threadpool(repo.upsert_document, chunk_data, vector)
+  File "/home/acartin/inference-stack/services/semantic-adapter/venv/lib/python3.12/site-packages/starlette/concurrency.py", line 32, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/acartin/inference-stack/services/semantic-adapter/venv/lib/python3.12/site-packages/anyio/to_thread.py", line 61, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/acartin/inference-stack/services/semantic-adapter/venv/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 2525, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "/home/acartin/inference-stack/services/semantic-adapter/venv/lib/python3.12/site-packages/anyio/_backends/_asyncio.py", line 986, in run
+    result = context.run(func, *args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/acartin/inference-stack/services/semantic-adapter/app/vector_repo.py", line 92, in upsert_document
+    cur.execute(
+psycopg2.errors.InvalidTextRepresentation: invalid input syntax for type uuid: "test-client-verify"
+LINE 13:         VALUES ('test-doc-001', 'test-client-verify', 'verif...
+                                         ^
+
+INFO:     127.0.0.1:58668 - "GET /api/v1/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58668 - "POST /api/v1/ingest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58668 - "DELETE /api/v1/client/bfab26ca-ee92-44ec-8515-ec28415b8535/document/test-doc-001 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58668 - "POST /api/v1/ingest HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58668 - "DELETE /api/v1/client/bfab26ca-ee92-44ec-8515-ec28415b8535 HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:semantic_adapter:🛑 Apagando Semantic Adapter...
+INFO:     Application shutdown complete.
+INFO:     Finished server process [435891]

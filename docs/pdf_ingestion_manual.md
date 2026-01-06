@@ -8,7 +8,7 @@ Este documento detalla la arquitectura, base de datos y flujos necesarios para i
 
 Para gestionar los PDFs y su estado de sincronización con la IA, se requiere una tabla dedicada en la base de datos de la aplicación Laravel.
 
-### Tabla Sugerida: `knowledge_documents`
+### Tabla Sugerida: `lead_knowledge_documents`
 
 | Columna | Tipo | Descripción |
 | :--- | :--- | :--- |
@@ -117,8 +117,15 @@ Si el usuario elimina un archivo específico pero mantiene el cliente:
 
 ## Resumen de Endpoints (Servidor AI)
 
-| Acción | Método | Endpoint | Payload Clave |
-| :--- | :--- | :--- | :--- |
-| **Ingestar** | `POST` | `/api/v1/ingest` | `content_id`, `body_content`, `client_id` |
-| **Borrar Cliente** | `DELETE` | `/api/v1/client/{id}` | N/A |
-| **Salud** | `GET` | `/api/v1/health` | N/A |
+2. API Endpoints Verified
+Ran automated tests (
+verify_ingestion_apis.py
+) against the service:
+
+Endpoint	Test Case	Result
+POST /ingest	Ingest a sample PDF content block with valid UUID client_id.	✅ Success (200 OK)
+DELETE /document	Delete the specific document by ID.	✅ Success (200 OK)
+DELETE /client	Delete all tokens for a client.	✅ Success (200 OK)
+Implementation Notes
+Schema Compliance: The API strictly enforces UUID format for client_id. Clients (Frontend/Laravel) must ensure they send valid UUIDs.
+Idempotency: The ingestion logic handles deduplication via content hash correctly.

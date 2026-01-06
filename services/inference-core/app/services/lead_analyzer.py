@@ -16,10 +16,14 @@ class LeadAnalyzer:
             temperature=0
         )
 
-    async def analyze_conversation(self, history: List[Dict[str, Any]]) -> LeadScoringResult:
+    async def analyze_conversation(self, history: List[Dict[str, Any]], catalogs: Dict[str, Any] = None) -> LeadScoringResult:
         """
-        Analiza el historial de la conversación y devuelve un objeto de scoring.
+        Analiza el historial de la conversación y devuelve un objeto de scoring y extracción de datos.
         """
+        catalogs = catalogs or {}
+        currencies = catalogs.get('currencies', [])
+        preferences = catalogs.get('preferences', [])
+        
         # Convert history to text
         conversation_text = ""
         for msg in history:
@@ -27,34 +31,40 @@ class LeadAnalyzer:
             conversation_text += f"{role}: {msg.get('text', msg.get('content', ''))}\n"
 
         prompt = ChatPromptTemplate.from_messages([
-            ("system", """Eres un experto en calificación de leads inmobiliarios. Tu tarea es analizar la conversación proporcionada y asignar un puntaje (score) para 5 criterios específicos.
+            ("system", f"""Eres un experto en calificación de leads inmobiliarios. Tu tarea es analizar la conversación y:
+1. Asignar puntajes (scores) para 5 criterios.
+2. EXTRAER INFORMACIÓN del perfil del usuario (Nombre, Email, Teléfono, Finanzas) si está presente explícitamente.
 
 CRITERIOS DE CALIFICACIÓN:
+1. ENGAGEMENT (-20 a 30): Interés del usuario.
+2. FINANCE (-10 a 30): Capacidad de pago.
+3. TIMELINE (0 a 20): Plazo de compra.
+4. MATCH (0 a 15): Ajuste al producto.
+5. INFO (-3 a 5): Calidad del perfil.
 
-1. ENGAGEMENT (Rango: -20 a 30):
-   - Mide el interés del usuario. (30 = Pide cita o deja datos claros, 10-20 = Hace preguntas de negocio, -20 = Insulta o pide que lo borren).
-2. FINANCE (Rango: -10 a 30):
-   - Capacidad de pago detectada. (30 = Cash/Contado, 20-25 = Crédito pre-aprobado/Ingresos altos, -10 = Dice no tener dinero).
-3. TIMELINE (Rango: 0 a 20):
-   - Plazo de compra. (20 = Inmediato/Este mes, 15 = 1-3 meses, 5 = Solo viendo/Largo plazo).
-4. MATCH (Rango: 0 a 15):
-   - Ajuste al producto. (15 = Busca exactamente lo que el contexto ofrece, 7-9 = Interés general, 0 = Busca algo totalmente distinto).
-5. INFO (Rango: -3 a 5):
-   - Calidad del perfil. (5 = Nombre, Celular y Email detectados, 1-3 = Faltan datos críticos, -3 = Datos falsos/Evasivo).
+INSTRUCCIONES DE EXTRACCIÓN AUTOMÁTICA:
+- Si el usuario menciona su NOMBRE COMPLETO, EMAIL o TELÉFONO, extráelos en los campos `extracted_name`, `extracted_email`, `extracted_phone`.
+- Si menciona INGRESOS MENSUALES, extráelo en `extracted_income` (solo el número).
+- Si menciona DEUDAS MENSUALES, extráelo en `extracted_debts` (solo el número).
+- Si menciona una MONEDA (Dólares, Colones, etc.), intenta mapearla a uno de estos códigos válidos: {{currencies}}. Si lo encuentras, pon el código en `extracted_currency_id`.
+- Si indica una PREFERENCIA DE CONTACTO (WhatsApp, Email, Llamada), intenta mapearla a uno de estos IDs válidos: {{preferences}}. Si hay coincidencia, pon el UUID en `extracted_contact_pref_id`.
 
-INSTRUCCIONES:
-- Analiza la INTENCIÓN del usuario, independientemente de si el Asistente pudo resolver la duda o no.
-- Devuelve un JSON con los 5 scores y un campo 'reasoning' corto en español.
-- Si no hay información suficiente para un criterio, usa el valor neutro (0).
+SI NO ENCUENTRAS EL DATO, DÉJALO NULL. NO INVENTES DATOS.
+
+Devuelve un JSON con los scores, el reasoning y los campos extraídos.
 """),
-            ("human", "Analiza la siguiente conversación y devuelve el scoring en formato JSON:\n\n{history}")
+            ("human", "Analiza la siguiente conversación y devuelve el scoring e información extraída en formato JSON:\n\n{history}")
         ])
 
         try:
             # Forzamos respuesta estructurada (JSON)
             structured_llm = self.llm.with_structured_output(LeadScoringResult)
             chain = prompt | structured_llm
-            result = await chain.ainvoke({"history": conversation_text})
+            result = await chain.ainvoke({
+                "history": conversation_text,
+                "currencies": currencies,
+                "preferences": preferences
+            })
             return result
         except Exception as e:
             logger.error(f"Error analyzing conversation: {e}")

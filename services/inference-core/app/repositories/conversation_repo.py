@@ -21,27 +21,16 @@ class ConversationRepository:
                     if conv:
                         return dict(conv)
                 
-                # If not found or not provided, we should ideally link it to a lead.
-                # For now, let's create a placeholder lead or just a conversation if the schema allows.
-                # Based on previous analysis, lead_id is NOT NULL. 
-                # We'll need a way to find or create a lead for this client.
+                # Logic strict: A new conversation ALWAYS implies a new Lead interaction flow
+                # (or at least capturing a new lead session).
+                # User Requirement: "when a new conversation enters, it must necessarily create a new lead"
                 
-                # Hardcoded logic for demo/initial step: find the first lead for this client_id
-                # In a real scenario, we'd have a more robust lead identification.
-                cur.execute("SELECT id FROM lead_leads WHERE client_id = %s LIMIT 1", (client_id,))
-                lead = cur.fetchone()
-                
-                if not lead:
-                    # Create a dummy lead for this client if none exists
-                    # We need source_id and full_name for lead_leads
-                    new_lead_id = str(uuid4())
-                    cur.execute(
-                        "INSERT INTO lead_leads (id, client_id, source_id, full_name) VALUES (%s, %s, %s, %s)",
-                        (new_lead_id, client_id, 14, f"User {client_id[:8]}")
-                    )
-                    lead_id = new_lead_id
-                else:
-                    lead_id = lead['id']
+                new_lead_id = str(uuid4())
+                cur.execute(
+                    "INSERT INTO lead_leads (id, client_id, source_id, full_name) VALUES (%s, %s, %s, %s)",
+                    (new_lead_id, client_id, 14, f"User {client_id[:8]}")
+                )
+                lead_id = new_lead_id
 
                 new_conv_id = str(conversation_id or uuid4())
                 cur.execute(
@@ -52,7 +41,9 @@ class ConversationRepository:
                     """,
                     (new_conv_id, lead_id, 'webchat', Json([]))
                 )
-                return dict(cur.fetchone())
+                result = dict(cur.fetchone())
+                conn.commit()
+                return result
 
     def get_conversation(self, conversation_id: UUID) -> Optional[Dict[str, Any]]:
         with self._get_connection() as conn:
@@ -122,13 +113,27 @@ class ConversationRepository:
                 # 3. Fallback de seguridad en código
                 return "Eres un asistente técnico. Responde basándote exclusivamente en el contexto:\n\n{context_text}"
 
+    def get_catalogs(self) -> Dict[str, Any]:
+        """
+        Retrieves valid currencies and contact preferences for the LLM context.
+        """
+        params = {}
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id FROM lead_currencies")
+                params['currencies'] = [r['id'] for r in cur.fetchall()]
+                
+                cur.execute("SELECT id, name FROM lead_contact_preferences WHERE active = true")
+                params['preferences'] = [{str(r['id']): r['name']} for r in cur.fetchall()]
+        return params
+
     def update_lead_scores(self, lead_id: str, scores: Dict[str, Any]):
         """
-        Actualiza los puntajes de un lead. El trigger fn_calculate_lead_score
-        se encargará de actualizar los def_id y el total automáticamente.
+        Updates lead scores and extracted fields if present.
         """
         with self._get_connection() as conn:
             with conn.cursor() as cur:
+                # 1. Base Score Update
                 cur.execute(
                     """
                     UPDATE lead_leads 
@@ -151,4 +156,45 @@ class ConversationRepository:
                         lead_id
                     )
                 )
+
+                # 2. Conditional Field Updates (only if extracted value is not None)
+                # We do this individually or build a dynamic query to avoid overwriting existig data with NULL
+                # if the LLM didn't find it this turn.
+                
+                updates = []
+                params = []
+                
+                if scores.get('extracted_name'):
+                    updates.append("full_name = %s")
+                    params.append(scores['extracted_name'])
+                
+                if scores.get('extracted_email'):
+                    updates.append("email = %s")
+                    params.append(scores['extracted_email'])
+                    
+                if scores.get('extracted_phone'):
+                    updates.append("phone = %s")
+                    params.append(scores['extracted_phone'])
+
+                if scores.get('extracted_income') is not None:
+                    updates.append("declared_income = %s")
+                    params.append(scores['extracted_income'])
+                    
+                if scores.get('extracted_debts') is not None:
+                    updates.append("current_debts = %s")
+                    params.append(scores['extracted_debts'])
+                    
+                if scores.get('extracted_currency_id'):
+                    updates.append("financial_currency_id = %s")
+                    params.append(scores['extracted_currency_id'])
+
+                if scores.get('extracted_contact_pref_id'):
+                    updates.append("contact_preference_id = %s")
+                    params.append(scores['extracted_contact_pref_id'])
+
+                if updates:
+                    sql = f"UPDATE lead_leads SET {', '.join(updates)} WHERE id = %s"
+                    params.append(lead_id)
+                    cur.execute(sql, tuple(params))
+                
                 conn.commit()
